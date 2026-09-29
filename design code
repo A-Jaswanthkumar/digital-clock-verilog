@@ -1,0 +1,241 @@
+module clock(
+    input reset,
+    clk,
+    input set_time,
+    sethour,
+    setmin,
+  input alarm_enable ,
+    input set_alarm,
+    setHour,
+    setMin,
+    output reg [7:0] alarm_hh,
+    alarm_mm,
+    alarm_ss,
+    output reg alarm_pm,
+    input [15:0] TIME,
+    output reg [7:0] hh,
+    mm,
+    ss,
+    output reg pm,
+    alarm,
+  output [41:0]display ,
+  input snooze
+);
+
+always @(posedge clk) begin
+    if (reset) begin
+        hh <= 8'h12;
+        mm <= 8'h00;
+        ss <= 8'h00;
+        pm <= 1'b0;
+
+        alarm_hh <= TIME[15:8];
+        alarm_mm <= TIME[7:0];
+        alarm_ss <= 8'h00;
+        alarm_pm <= 1'b0;
+    end
+
+    else if (set_time) begin
+
+        if (sethour) begin
+            ss <= ss;
+
+            if (hh == 8'h11) begin
+                hh <= 8'h12;
+                pm <= ~pm;
+            end
+            else if (hh == 8'h09) begin
+                hh <= 8'h10;
+            end
+            else if (hh == 8'h12) begin
+                hh <= 8'h01;
+            end
+            else begin
+                hh <= hh + 1;
+            end
+        end
+
+        else if (setmin) begin
+            ss <= ss;
+
+            if (mm == 8'h59) begin
+                mm <= 8'h00;
+            end
+            else if (mm[3:0] == 9) begin
+                mm[3:0] <= 0;
+                mm[7:4] <= mm[7:4] + 1;
+            end
+            else begin
+                mm[3:0] <= mm[3:0] + 1;
+            end
+        end
+
+        else begin
+            hh <= hh;
+            mm <= mm;
+            ss <= ss;
+        end
+    end
+
+    else if (set_alarm) begin
+
+        if (setHour) begin
+            if (alarm_hh == 8'h11) begin
+                alarm_hh <= 8'h12;
+                alarm_pm <= ~alarm_pm;
+            end
+            else if (alarm_hh == 8'h09) begin
+                alarm_hh <= 8'h10;
+            end
+            else if (alarm_hh == 8'h12) begin
+                alarm_hh <= 8'h01;
+            end
+            else begin
+                alarm_hh <= alarm_hh + 1;
+            end
+        end
+
+        else if (setMin) begin
+            if (alarm_mm == 8'h59) begin
+                alarm_mm <= 8'h00;
+            end
+            else if (alarm_mm[3:0] == 9) begin
+                alarm_mm[3:0] <= 0;
+                alarm_mm[7:4] <= alarm_mm[7:4] + 1;
+            end
+            else begin
+                alarm_mm[3:0] <= alarm_mm[3:0] + 1;
+            end
+        end
+
+        else begin
+            alarm_hh <= alarm_hh;
+            alarm_mm <= alarm_mm;
+            alarm_ss <= 8'h00;
+        end
+    end
+  else if(snooze && alarm) begin
+      
+    if (alarm_mm == 8'h59) begin
+        alarm_mm <= 8'h00;
+
+        if (alarm_hh == 8'h11) begin
+            alarm_hh <= 8'h12;
+            alarm_pm <= ~alarm_pm;
+        end
+        else if (alarm_hh == 8'h09) begin
+            alarm_hh <= 8'h10;
+        end
+        else if (alarm_hh == 8'h12) begin
+            alarm_hh <= 8'h01;
+        end
+        else begin
+            alarm_hh <= alarm_hh + 1;
+        end
+    end
+
+    else if (alarm_mm[3:0] == 9) begin
+        alarm_mm[3:0] <= 0;
+        alarm_mm[7:4] <= alarm_mm[7:4] + 1;
+    end
+
+    else begin
+        alarm_mm[3:0] <= alarm_mm[3:0] + 1;
+    end
+end
+
+    else begin
+      
+        if (ss == 8'h59) begin
+            ss <= 8'h00;
+
+            if (mm == 8'h59) begin
+                mm <= 8'h00;
+
+                if (hh == 8'h11) begin
+                    hh <= 8'h12;
+                    pm <= ~pm;
+                end
+                else if (hh == 8'h09) begin
+                    hh <= 8'h10;
+                end
+                else if (hh == 8'h12) begin
+                    hh <= 8'h01;
+                end
+                else begin
+                    hh <= hh + 1;
+                end
+            end
+
+            else begin
+                if (mm[3:0] == 9) begin
+                    mm[3:0] <= 0;
+                    mm[7:4] <= mm[7:4] + 1;
+                end
+                else begin
+                    mm[3:0] <= mm[3:0] + 1;
+                end
+            end
+        end
+
+        else begin
+            if (ss[3:0] == 9) begin
+                ss[3:0] <= 0;
+                ss[7:4] <= ss[7:4] + 1;
+            end
+            else begin
+                ss[3:0] <= ss[3:0] + 1;
+            end
+        end
+    end
+end
+
+wire [7:0] hour, min;
+
+assign hour = alarm_hh;
+assign min = alarm_mm;
+
+always @(*) begin
+  if(alarm_enable)begin
+    if (alarm_pm == pm && hour == hh&& min == mm&&ss == 8'h00) begin
+       
+                    alarm = 1'b1;
+                end
+                else begin
+                    alarm = 1'b0;
+                end
+  end
+    else 
+      alarm=1'b0;
+      
+          
+
+end
+  segment sg1(hh[7:4],display[41:35]);
+  segment sg2(hh[3:0],display[34:28]);
+  segment sg3(mm[7:4],display[27:21]);
+  segment sg4(mm[3:0],display[20:14]);
+  segment sg5(ss[7:4],display[13:7]);
+  segment sg6(ss[3:0],display[6:0]);
+  
+
+endmodule
+module segment ( input [0:3] in, output reg [6:0] display);
+  always@(*)begin
+    case (in)
+      4'd0:display=7'b1111110;
+       4'd1:display=7'b0110000;
+       4'd2:display=7'b1101101;
+       4'd3:display=7'b1111001;
+       4'd4:display=7'b0110011;
+       4'd5:display=7'b1011011;
+       4'd6:display=7'b1011111;
+       4'd7:display=7'b1110000;
+       4'd8:display=7'b1111111;
+       4'd9:display=7'b1111011;
+    endcase
+  end 
+endmodule
+      
+                        
+                        
